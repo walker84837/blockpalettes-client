@@ -45,7 +45,6 @@ impl BlockPalettesClient {
             .json::<BlockSearchResponse>()
             .await?;
 
-        eprintln!("search_blocks: {:#?}", response);
         if response.success {
             Ok(response.blocks)
         } else {
@@ -63,7 +62,6 @@ impl BlockPalettesClient {
             .json::<PopularBlocksResponse>()
             .await?;
 
-        eprintln!("popular_blocks: {:#?}", response);
         if response.success {
             Ok(response.blocks)
         } else {
@@ -106,8 +104,6 @@ impl BlockPalettesClient {
                     .join("&amp;")
             );
 
-            println!("Requesting: {}", final_url);
-
             let response = self
                 .client
                 .get(&final_url)
@@ -115,8 +111,6 @@ impl BlockPalettesClient {
                 .await?
                 .json::<PaletteResponse>()
                 .await?;
-
-            println!("Got response: {:?}", response);
 
             if total_results == 0 {
                 total_results = response.total_results;
@@ -128,7 +122,7 @@ impl BlockPalettesClient {
             }
         }
 
-        // Flatten and filter
+        // flatten from Vec<Vec<Palette> to Vec<Palette> because of the way the API works
         let filtered: Vec<Palette> = all_palettes
             .into_iter()
             .flatten()
@@ -155,8 +149,6 @@ impl BlockPalettesClient {
             .json::<SinglePaletteResponse>()
             .await?;
 
-        eprintln!("get_palette_details: {:#?}", response);
-
         if response.success {
             Ok(response.palette)
         } else {
@@ -177,8 +169,6 @@ impl BlockPalettesClient {
             .await?
             .json::<SimilarPalettesResponse>()
             .await?;
-
-        eprintln!("get_similar_palettes: {:#?}", response);
 
         if response.success {
             Ok(response.palettes)
