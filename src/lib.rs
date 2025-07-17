@@ -45,6 +45,7 @@ impl BlockPalettesClient {
             .json::<BlockSearchResponse>()
             .await?;
 
+        eprintln!("search_blocks: {:#?}", response);
         if response.success {
             Ok(response.blocks)
         } else {
@@ -62,6 +63,7 @@ impl BlockPalettesClient {
             .json::<PopularBlocksResponse>()
             .await?;
 
+        eprintln!("popular_blocks: {:#?}", response);
         if response.success {
             Ok(response.blocks)
         } else {
@@ -78,70 +80,68 @@ impl BlockPalettesClient {
         page: u32,
         limit: u32,
     ) -> Result<PaletteResponse, BlockPalettesError> {
-        let url = format!("{}/api/palettes/all_palettes.php", self.base_url);
+        let base = format!("{}/api/palettes/all_palettes.php", self.base_url);
 
-        let mut query = vec![
+        let query = vec![
             ("sort", sort.to_string()),
             ("page", page.to_string()),
             ("limit", limit.to_string()),
         ];
 
-        // handle multiple blocks by making multiple requests
-        if blocks.len() > 1 {
-            let mut all_palettes = Vec::new();
-            let mut total_results = 0;
-            let mut total_pages = 0;
+        let mut all_palettes = Vec::new();
+        let mut total_results = 0;
+        let mut total_pages = 0;
 
-            for &block in blocks {
-                let mut block_query = query.clone();
-                block_query.push(("blocks", block.to_string()));
+        // for each block, do separate request because you can only search by one at a time
+        for &block in blocks {
+            let mut q = query.clone();
+            q.push(("blocks", block.to_string()));
 
-                let response = self
-                    .client
-                    .get(&url)
-                    .query(&block_query)
-                    .send()
-                    .await?
-                    .json::<PaletteResponse>()
-                    .await?;
+            let final_url = format!(
+                "{}?{}",
+                base,
+                q.iter()
+                    .map(|(k, v)| format!("{}={}", k, v))
+                    .collect::<Vec<_>>()
+                    .join("&amp;")
+            );
 
-                if total_results == 0 {
-                    total_results = response.total_results;
-                    total_pages = response.total_pages;
-                }
-
-                all_palettes.extend(response.palettes);
-            }
-
-            // filter palettes that contain all requested blocks
-            let filtered = all_palettes
-                .into_iter()
-                .filter(|p| p.contains_all_blocks(blocks))
-                .collect();
-
-            Ok(PaletteResponse {
-                success: true,
-                palettes: filtered,
-                total_results,
-                current_page: page,
-                total_pages,
-            })
-        } else {
-            if !blocks.is_empty() {
-                query.push(("blocks", blocks[0].to_string()));
-            }
+            println!("Requesting: {}", final_url);
 
             let response = self
                 .client
-                .get(&url)
-                .query(&query)
+                .get(&final_url)
                 .send()
                 .await?
                 .json::<PaletteResponse>()
                 .await?;
 
-            Ok(response)
+            println!("Got response: {:?}", response);
+
+            if total_results == 0 {
+                total_results = response.total_results;
+                total_pages = response.total_pages;
+            }
+
+            if let Some(palettes) = response.palettes {
+                all_palettes.push(palettes);
+            }
         }
+
+        // Flatten and filter
+        let filtered: Vec<Palette> = all_palettes
+            .into_iter()
+            .flatten()
+            .filter(|p| p.contains_all_blocks(blocks))
+            .collect();
+
+        Ok(PaletteResponse {
+            success: true,
+            palettes: Some(filtered),
+            total_results,
+            current_page: page,
+            total_pages,
+        })
     }
 
     pub async fn get_palette_details(&self, id: u64) -> Result<PaletteDetails, BlockPalettesError> {
@@ -154,6 +154,8 @@ impl BlockPalettesClient {
             .await?
             .json::<SinglePaletteResponse>()
             .await?;
+
+        eprintln!("get_palette_details: {:#?}", response);
 
         if response.success {
             Ok(response.palette)
@@ -175,6 +177,8 @@ impl BlockPalettesClient {
             .await?
             .json::<SimilarPalettesResponse>()
             .await?;
+
+        eprintln!("get_similar_palettes: {:#?}", response);
 
         if response.success {
             Ok(response.palettes)
@@ -284,7 +288,7 @@ pub struct PaletteResponse {
     pub total_results: u32,
     pub current_page: u32,
     pub total_pages: u32,
-    pub palettes: Vec<Palette>,
+    pub palettes: Option<Vec<Palette>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
