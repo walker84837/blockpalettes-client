@@ -78,35 +78,22 @@ impl BlockPalettesClient {
         page: u32,
         limit: u32,
     ) -> Result<PaletteResponse, BlockPalettesError> {
-        let base = format!("{}/api/palettes/all_palettes.php", self.base_url);
-
-        let query = vec![
-            ("sort", sort.to_string()),
-            ("page", page.to_string()),
-            ("limit", limit.to_string()),
-        ];
+        let url = format!("{}/api/palettes/all_palettes.php", self.base_url);
 
         let mut all_palettes = Vec::new();
         let mut total_results = 0;
         let mut total_pages = 0;
 
-        // for each block, do separate request because you can only search by one at a time
         for &block in blocks {
-            let mut q = query.clone();
-            q.push(("blocks", block.to_string()));
-
-            let final_url = format!(
-                "{}?{}",
-                base,
-                q.iter()
-                    .map(|(k, v)| format!("{}={}", k, v))
-                    .collect::<Vec<_>>()
-                    .join("&amp;")
-            );
-
             let response = self
                 .client
-                .get(&final_url)
+                .get(&url)
+                .query(&[
+                    ("sort", sort.to_string()),
+                    ("page", page.to_string()),
+                    ("limit", limit.to_string()),
+                    ("blocks", block.to_string()),
+                ])
                 .send()
                 .await?
                 .json::<PaletteResponse>()
@@ -117,15 +104,13 @@ impl BlockPalettesClient {
                 total_pages = response.total_pages;
             }
 
-            if let Some(palettes) = response.palettes {
-                all_palettes.push(palettes);
+            if let Some(mut ps) = response.palettes {
+                all_palettes.append(&mut ps);
             }
         }
 
-        // flatten from Vec<Vec<Palette> to Vec<Palette> because of the way the API works
-        let filtered: Vec<Palette> = all_palettes
+        let filtered = all_palettes
             .into_iter()
-            .flatten()
             .filter(|p| p.contains_all_blocks(blocks))
             .collect();
 
@@ -281,7 +266,7 @@ pub struct PaletteResponse {
     pub palettes: Option<Vec<Palette>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct Palette {
     pub id: u64,
     pub user_id: u64,
@@ -301,7 +286,7 @@ pub struct Palette {
     pub block_six: String,
     pub hidden: u8,
     pub featured: u8,
-    pub hash: String,
+    pub hash: Option<String>,
     pub time_ago: String,
 }
 
