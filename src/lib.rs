@@ -118,7 +118,6 @@ impl BlockPalettesClient {
             success: true,
             palettes: Some(filtered),
             total_results,
-            current_page: page,
             total_pages,
         })
     }
@@ -261,7 +260,6 @@ pub struct PopularBlock {
 pub struct PaletteResponse {
     pub success: bool,
     pub total_results: u32,
-    pub current_page: u32,
     pub total_pages: u32,
     pub palettes: Option<Vec<Palette>>,
 }
