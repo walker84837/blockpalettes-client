@@ -2,6 +2,8 @@
 name = "blockpalettes-client"
 version = "0.1.0"
 edition = "2024"
+description = "Unofficial Rust client for BlockPalettes with built-in HTTP and scraping support"
+repository = "https://github.com/walker84837/blockpalettes-client"
 
 [dependencies]
 chrono = "0.4.41"
