@@ -252,7 +252,7 @@ impl<'a> BlockPalettesClient<'a> {
     ///     if let Some(palettes) = response.palettes {
     ///         println!("Found {} popular palettes containing oak_log and dirt:", palettes.len());
     ///         for palette in palettes {
-    ///             println!("- ID: {}, Name: {}", palette.id, palette.name());
+    ///             println!("- ID: {}, Name: {:?}", palette.id, palette.name());
     ///         }
     ///     }
     ///     Ok(())
@@ -382,9 +382,9 @@ impl<'a> BlockPalettesClient<'a> {
     ///     let client = BlockPalettesClient::new(reqwest::Client::new());
     ///     let reference_palette_id = 12345; // Replace with an actual palette ID
     ///     let similar_palettes = client.get_similar_palettes(reference_palette_id).await?;
-    ///     println!("Found {} similar palettes for ID {}:".to_string(), similar_palettes.len(), reference_palette_id);
+    ///     println!("Found {} similar palettes for ID {}:", similar_palettes.len(), reference_palette_id);
     ///     for palette in similar_palettes.iter().take(3) {
-    ///         println!("- ID: {}, Name: {}", palette.id, palette.name());
+    ///         println!("- ID: {}, Name: {:?}", palette.id, palette.name());
     ///     }
     ///     Ok(())
     /// }
@@ -703,7 +703,7 @@ impl Palette {
     ///
     /// ```rust
     /// # use blockpalettes_client::Palette;
-    /// # use chrono::NaiveDate;
+    /// # use chrono::{NaiveDate, Timelike};
     /// # let palette = Palette {
     /// #    id: 1, user_id: 1, date: "2023-01-01 12:30:00".to_string(), likes: 10,
     /// #    block_one: "stone".to_string(), block_two: "dirt".to_string(),
