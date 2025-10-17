@@ -603,9 +603,11 @@ pub struct Palette {
     #[serde(rename = "blockSix")]
     pub block_six: String,
     /// A flag indicating if the palette is hidden (0 for not hidden, 1 for hidden).
-    pub hidden: u8,
+    #[serde(default)]
+    pub hidden: Option<u8>,
     /// A flag indicating if the palette is featured (0 for not featured, 1 for featured).
-    pub featured: u8,
+    #[serde(default)]
+    pub featured: Option<u8>,
     /// An optional hash associated with the palette.
     pub hash: Option<String>,
     /// A human-readable string indicating how long ago the palette was created (e.g., "2 days ago").
@@ -631,7 +633,7 @@ impl Palette {
     /// #    block_one: "stone".to_string(), block_two: "dirt".to_string(),
     /// #    block_three: "grass_block".to_string(), block_four: "oak_log".to_string(),
     /// #    block_five: "cobblestone".to_string(), block_six: "sand".to_string(),
-    /// #    hidden: 0, featured: 0, hash: None, time_ago: "1 day ago".to_string()
+    /// #    hidden: Some(0), featured: Some(0), hash: None, time_ago: "1 day ago".to_string()
     /// # };
     /// let blocks = palette.name();
     /// assert_eq!(blocks.len(), 6);
@@ -671,7 +673,7 @@ impl Palette {
     /// #    block_one: "stone".to_string(), block_two: "dirt".to_string(),
     /// #    block_three: "grass_block".to_string(), block_four: "oak_log".to_string(),
     /// #    block_five: "cobblestone".to_string(), block_six: "sand".to_string(),
-    /// #    hidden: 0, featured: 0, hash: None, time_ago: "1 day ago".to_string()
+    /// #    hidden: Some(0), featured: Some(0), hash: None, time_ago: "1 day ago".to_string()
     /// # };
     /// assert!(palette.contains_all_blocks(&["stone", "dirt"]));
     /// assert!(!palette.contains_all_blocks(&["stone", "diamond_block"]));
@@ -709,7 +711,7 @@ impl Palette {
     /// #    block_one: "stone".to_string(), block_two: "dirt".to_string(),
     /// #    block_three: "grass_block".to_string(), block_four: "oak_log".to_string(),
     /// #    block_five: "cobblestone".to_string(), block_six: "sand".to_string(),
-    /// #    hidden: 0, featured: 0, hash: None, time_ago: "1 day ago".to_string()
+    /// #    hidden: Some(0), featured: Some(0), hash: None, time_ago: "1 day ago".to_string()
     /// # };
     /// let datetime = palette.parse_date().unwrap();
     /// assert_eq!(datetime.date(), NaiveDate::from_ymd_opt(2023, 1, 1).unwrap());
