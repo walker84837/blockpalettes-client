@@ -17,24 +17,24 @@ pub enum BlockPalettesError {
     InvalidDateFormat,
 }
 
+pub type Result<T, E = BlockPalettesError> = std::result::Result<T, E>;
+
 #[derive(Debug, Clone)]
-pub struct BlockPalettesClient {
+/// A client for the Block Palettes API.
+pub struct BlockPalettesClient<'a> {
     client: Client,
-    base_url: String,
+    base_url: &'a str,
 }
 
-impl BlockPalettesClient {
-    pub fn new(client: Client) -> Self {
+impl<'a> BlockPalettesClient<'a> {
+    pub const fn new(client: Client) -> Self {
         Self {
             client,
-            base_url: "https://www.blockpalettes.com".to_string(),
+            base_url: "https://www.blockpalettes.com",
         }
     }
 
-    pub async fn search_blocks(
-        &self,
-        query: impl AsRef<str>,
-    ) -> Result<Vec<String>, BlockPalettesError> {
+    pub async fn search_blocks(&self, query: impl AsRef<str>) -> Result<Vec<String>> {
         let url = format!("{}/api/palettes/search-block.php", self.base_url);
         let response = self
             .client
@@ -52,7 +52,7 @@ impl BlockPalettesClient {
         }
     }
 
-    pub async fn popular_blocks(&self) -> Result<Vec<PopularBlock>, BlockPalettesError> {
+    pub async fn popular_blocks(&self) -> Result<Vec<PopularBlock>> {
         let url = format!("{}/api/palettes/popular-blocks.php", self.base_url);
         let response = self
             .client
@@ -77,7 +77,7 @@ impl BlockPalettesClient {
         sort: SortOrder,
         page: u32,
         limit: u32,
-    ) -> Result<PaletteResponse, BlockPalettesError> {
+    ) -> Result<PaletteResponse> {
         let url = format!("{}/api/palettes/all_palettes.php", self.base_url);
 
         let mut all_palettes = Vec::new();
@@ -122,7 +122,7 @@ impl BlockPalettesClient {
         })
     }
 
-    pub async fn get_palette_details(&self, id: u64) -> Result<PaletteDetails, BlockPalettesError> {
+    pub async fn get_palette_details(&self, id: u64) -> Result<PaletteDetails> {
         let url = format!("{}/api/palettes/single_palette.php", self.base_url);
         let response = self
             .client
@@ -140,10 +140,7 @@ impl BlockPalettesClient {
         }
     }
 
-    pub async fn get_similar_palettes(
-        &self,
-        palette_id: u64,
-    ) -> Result<Vec<Palette>, BlockPalettesError> {
+    pub async fn get_similar_palettes(&self, palette_id: u64) -> Result<Vec<Palette>> {
         let url = format!("{}/api/palettes/similar_palettes.php", self.base_url);
         let response = self
             .client
@@ -161,10 +158,7 @@ impl BlockPalettesClient {
         }
     }
 
-    pub async fn scrape_palette_page(
-        &self,
-        palette_id: u64,
-    ) -> Result<PalettePageDetails, BlockPalettesError> {
+    pub async fn scrape_palette_page(&self, palette_id: u64) -> Result<PalettePageDetails> {
         let url = format!("{}/palette/{}", self.base_url, palette_id);
         let html = self.client.get(&url).send().await?.text().await?;
 
