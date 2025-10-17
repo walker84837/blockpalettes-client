@@ -80,7 +80,7 @@ pub type Result<T, E = BlockPalettesError> = std::result::Result<T, E>;
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust
 /// use blockpalettes_client::{BlockPalettesClient, SortOrder};
 ///
 /// #[tokio::main]
@@ -141,7 +141,7 @@ impl<'a> BlockPalettesClient<'a> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use blockpalettes_client::BlockPalettesClient;
     ///
     /// #[tokio::main]
@@ -184,7 +184,7 @@ impl<'a> BlockPalettesClient<'a> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use blockpalettes_client::BlockPalettesClient;
     ///
     /// #[tokio::main]
@@ -238,7 +238,7 @@ impl<'a> BlockPalettesClient<'a> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use blockpalettes_client::{BlockPalettesClient, SortOrder};
     ///
     /// #[tokio::main]
@@ -326,7 +326,7 @@ impl<'a> BlockPalettesClient<'a> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use blockpalettes_client::BlockPalettesClient;
     ///
     /// #[tokio::main]
@@ -374,13 +374,13 @@ impl<'a> BlockPalettesClient<'a> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use blockpalettes_client::BlockPalettesClient;
     ///
     /// #[tokio::main]
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     let client = BlockPalettesClient::new(reqwest::Client::new());
-    ///     let reference_palette_id = 12345; // Replace with an actual palette ID
+    ///     let reference_palette_id = 56655; // Replace with an actual palette ID
     ///     let similar_palettes = client.get_similar_palettes(reference_palette_id).await?;
     ///     println!("Found {} similar palettes for ID {}:", similar_palettes.len(), reference_palette_id);
     ///     for palette in similar_palettes.iter().take(3) {
@@ -430,7 +430,7 @@ impl<'a> BlockPalettesClient<'a> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use blockpalettes_client::BlockPalettesClient;
     ///
     /// #[tokio::main]
