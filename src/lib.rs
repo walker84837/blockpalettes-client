@@ -92,12 +92,12 @@ pub type Result<T, E = BlockPalettesError> = std::result::Result<T, E>;
 /// }
 /// ```
 #[derive(Debug, Clone)]
-pub struct BlockPalettesClient<'a> {
+pub struct BlockPalettesClient {
     client: Client,
-    base_url: &'a str,
+    base_url: &'static str,
 }
 
-impl<'a> BlockPalettesClient<'a> {
+impl BlockPalettesClient {
     /// Creates a new [`BlockPalettesClient`] instance.
     ///
     /// # Arguments
