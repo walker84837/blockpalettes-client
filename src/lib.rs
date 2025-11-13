@@ -519,6 +519,29 @@ impl std::fmt::Display for SortOrder {
     }
 }
 
+impl SortOrder {
+    /// Returns a user-friendly display name for the `SortOrder` enum variant.
+    ///
+    /// This is intended for UI or logging purposes, and differs from the
+    /// API representation used by [`Display`] or serialization.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use blockpalettes_client::SortOrder;
+    /// let order = SortOrder::Recent;
+    /// assert_eq!(order.to_display_name(), "Recent");
+    /// ```
+    pub const fn to_display_name(&self) -> &'static str {
+        match self {
+            SortOrder::Recent => "Recent",
+            SortOrder::Popular => "Popular",
+            SortOrder::Oldest => "Oldest",
+            SortOrder::Trending => "Trending",
+        }
+    }
+}
+
 /// Internal struct for deserializing the response from the `/api/palettes/search-block.php` endpoint.
 #[derive(Debug, Deserialize)]
 struct BlockSearchResponse {
