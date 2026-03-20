@@ -5,6 +5,7 @@ edition = "2024"
 description = "Unofficial Rust client for BlockPalettes with built-in HTTP and scraping support"
 repository = "https://github.com/walker84837/blockpalettes-client"
 license = "Apache-2.0 OR MIT"
+rust-version = "1.88.0"
 
 [dependencies]
 chrono = "0.4.44"
