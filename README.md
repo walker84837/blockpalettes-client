@@ -6,7 +6,7 @@
 [![crates.io downloads](https://img.shields.io/crates/d/blockpalettes-client.svg)](https://crates.io/crates/blockpalettes-client)
 [![dependency status](https://deps.rs/crate/blockpalettes-client/latest/status.svg)](https://deps.rs/crate/blockpalettes-client)
 
-Unofficial Rust client for [BlockPalettes](https://blockpalettes.com) with built-in HTTP and scraping support. Now includes [OpenAPI specification](openapi.yml)!
+Unofficial Rust client for [BlockPalettes](https://blockpalettes.com) with built-in HTTP and scraping support. Now includes [OpenAPI specification](openapi.yml) and [API documentation](https://walker84837.github.io/blockpalettes-client)!
 
 ## Why `blockpalettes-client` Exists
 
