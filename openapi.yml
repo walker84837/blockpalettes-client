@@ -1,0 +1,236 @@
+openapi: 3.0.3
+info:
+  title: Block Palettes API
+  version: 1.0.0
+  description: |
+    API for searching and retrieving Minecraft block palettes from blockpalettes.com.
+
+servers:
+  - url: https://www.blockpalettes.com
+
+paths:
+  /api/palettes/search-block.php:
+    get:
+      summary: Search blocks
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Block search string (e.g., "stone")
+      responses:
+        "200":
+          description: List of matching blocks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  blocks:
+                    type: array
+                    items:
+                      type: string
+
+  /api/palettes/popular-blocks.php:
+    get:
+      summary: Get popular blocks
+      responses:
+        "200":
+          description: Popular blocks list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  blocks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PopularBlock"
+
+  /api/palettes/all_palettes.php:
+    get:
+      summary: Get palettes
+      description: |
+        Retrieves palettes filtered by block and sorted. Note:
+        The client performs multiple calls (one per block) and filters results locally.
+      parameters:
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, popular, oldest, trending]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: blocks
+          in: query
+          schema:
+            type: string
+          description: Single block name (API only supports one per request)
+      responses:
+        "200":
+          description: Palette list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaletteResponse"
+
+  /api/palettes/single_palette.php:
+    get:
+      summary: Get palette details
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: uint64
+      responses:
+        "200":
+          description: Palette details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  palette:
+                    $ref: "#/components/schemas/PaletteDetails"
+
+  /api/palettes/similar_palettes.php:
+    get:
+      summary: Get similar palettes
+      parameters:
+        - name: palette_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: uint64
+      responses:
+        "200":
+          description: Similar palettes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  palettes:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Palette"
+
+components:
+  schemas:
+    PopularBlock:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Block name
+        count:
+          type: integer
+          description: Number of palettes containing the block
+
+    Palette:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint64
+        user_id:
+          type: integer
+          format: uint64
+        date:
+          type: string
+          example: "2023-01-01 12:00:00"
+        likes:
+          type: integer
+        blockOne:
+          type: string
+        blockTwo:
+          type: string
+        blockThree:
+          type: string
+        blockFour:
+          type: string
+        blockFive:
+          type: string
+        blockSix:
+          type: string
+        hidden:
+          type: integer
+          nullable: true
+        featured:
+          type: integer
+          nullable: true
+        hash:
+          type: string
+          nullable: true
+        time_ago:
+          type: string
+
+    PaletteDetails:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint64
+        user_id:
+          type: integer
+          format: uint64
+        date:
+          type: string
+        likes:
+          type: integer
+        blockOne:
+          type: string
+        blockTwo:
+          type: string
+        blockThree:
+          type: string
+        blockFour:
+          type: string
+        blockFive:
+          type: string
+        blockSix:
+          type: string
+        hidden:
+          type: integer
+        featured:
+          type: integer
+        hash:
+          type: string
+        username:
+          type: string
+        time_ago:
+          type: string
+
+    PaletteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        total_results:
+          type: integer
+        total_pages:
+          type: integer
+        palettes:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/Palette"
