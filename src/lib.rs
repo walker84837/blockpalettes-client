@@ -272,7 +272,7 @@ impl BlockPalettesClient {
         let mut total_pages = 0;
 
         for &block in blocks {
-            let response = self
+            let json = self
                 .client
                 .get(&url)
                 .query(&[
@@ -282,13 +282,17 @@ impl BlockPalettesClient {
                     ("blocks", block.to_string()),
                 ])
                 .send()
-                .await?
-                .json::<PaletteResponse>()
                 .await?;
+
+            if !json.status().is_success() {
+                return Err(BlockPalettesError::Api("Palettes request failed".into()));
+            }
+
+            let response = json.json::<PaletteResponse>().await?;
 
             if total_results == 0 {
                 total_results = response.total_results;
-                total_pages = response.total_pages;
+                total_pages = response.total_pages.unwrap_or_default();
             }
 
             if let Some(mut ps) = response.palettes {
@@ -306,7 +310,7 @@ impl BlockPalettesClient {
             success: true,
             palettes: Some(filtered),
             total_results,
-            total_pages,
+            total_pages: Some(total_pages),
         })
     }
 
@@ -588,7 +592,7 @@ pub struct PaletteResponse {
     /// The total number of results found for the query.
     pub total_results: u32,
     /// The total number of pages available for the query.
-    pub total_pages: u32,
+    pub total_pages: Option<u32>,
     /// An optional vector of [`Palette`] objects. It will be `None` if no palettes were found.
     pub palettes: Option<Vec<Palette>>,
 }
