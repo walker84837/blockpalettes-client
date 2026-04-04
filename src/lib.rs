@@ -40,6 +40,7 @@ use thiserror::Error;
 /// Represents the possible errors that can occur when interacting with the
 /// Block Palettes API.
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum BlockPalettesError {
     /// An HTTP request failed, typically due to network issues, DNS resolution,
     /// or invalid URLs.
@@ -53,6 +54,11 @@ pub enum BlockPalettesError {
     /// The contained `String` provides more details about the API-specific error.
     #[error("API error: {0}")]
     Api(String),
+    /// The requested resource was not found.
+    ///
+    /// The contained `String` identifies the resource that could not be found.
+    #[error("not found: {0}")]
+    NotFound(String),
     /// An error occurred during the parsing of HTML content, typically when
     /// scraping a palette page.
     ///
@@ -62,9 +68,10 @@ pub enum BlockPalettesError {
     /// The date string received from the API could not be parsed into a
     /// `NaiveDateTime` object.
     ///
+    /// The contained `String` is the raw date value that failed to parse.
     /// This usually indicates an unexpected date format from the API.
-    #[error("Invalid date format")]
-    InvalidDateFormat,
+    #[error("invalid date format: {0}")]
+    InvalidDateFormat(String),
 }
 
 /// A specialized `Result` type for Block Palettes operations.
@@ -358,7 +365,7 @@ impl BlockPalettesClient {
         if response.success {
             Ok(response.palette)
         } else {
-            Err(BlockPalettesError::Api("Palette not found".into()))
+            Err(BlockPalettesError::NotFound("palette".into()))
         }
     }
 
@@ -407,7 +414,7 @@ impl BlockPalettesClient {
         if response.success {
             Ok(response.palettes)
         } else {
-            Err(BlockPalettesError::Api("Similar palettes not found".into()))
+            Err(BlockPalettesError::NotFound("similar palettes".into()))
         }
     }
 
@@ -746,7 +753,7 @@ impl Palette {
     /// ```
     pub fn parse_date(&self) -> Result<NaiveDateTime> {
         NaiveDateTime::parse_from_str(&self.date, "%Y-%m-%d %H:%M:%S")
-            .map_err(|_| BlockPalettesError::InvalidDateFormat)
+            .map_err(|_| BlockPalettesError::InvalidDateFormat(self.date.clone()))
     }
 }
 
