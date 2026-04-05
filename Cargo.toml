@@ -9,10 +9,15 @@ rust-version = "1.88.0"
 
 [dependencies]
 chrono = "0.4.44"
+futures-core = { version = "0.3", optional = true }
 reqwest = { version = "0.13.2", features = ["json", "query"] }
 scraper = "0.26.0"
 serde = { version = "1.0.228", features = ["derive"] }
 thiserror = "2.0.18"
+
+[features]
+default = []
+stream = ["dep:futures-core"]
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

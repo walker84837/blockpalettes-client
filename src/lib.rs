@@ -17,7 +17,14 @@
 //! - Fetch detailed information for individual palettes.
 //! - Get similar palettes based on a given palette ID.
 //! - Scrape palette page details (blocks and similar palette IDs) directly from HTML.
+//! - Iterate over paginated palette results with [`PalettePaginator`].
 //! - Robust error handling with custom error types.
+//!
+//! # Re-exports
+//!
+//! For convenience, this crate re-exports [`reqwest::Client`] and
+//! [`chrono::NaiveDateTime`] so you don't always need to add those crates
+//! to your `Cargo.toml` separately.
 //!
 //! # Error Handling
 //!
@@ -30,12 +37,22 @@
 //! Key data structures like [`Palette`], [`PaletteDetails`], and [`PopularBlock`]
 //! are provided to represent the API responses.
 
-use chrono::NaiveDateTime;
-use reqwest::Client;
+pub use chrono::NaiveDateTime;
+pub use reqwest::Client;
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use thiserror::Error;
+
+#[cfg(feature = "stream")]
+use std::future::Future;
+#[cfg(feature = "stream")]
+use std::pin::Pin;
+
+#[cfg(feature = "stream")]
+use futures_core::Stream;
+#[cfg(feature = "stream")]
+use std::task::{Context, Poll};
 
 /// Represents the possible errors that can occur when interacting with the
 /// Block Palettes API.
@@ -321,6 +338,59 @@ impl BlockPalettesClient {
         })
     }
 
+    /// Returns a [`PalettePaginator`] for iterating over palettes page by page.
+    ///
+    /// This is a convenience wrapper around [`get_palettes`] that automatically
+    /// increments the page number on each call to [`PalettePaginator::next_page`].
+    ///
+    /// # Arguments
+    ///
+    /// * `blocks` - A slice of string references representing the blocks that
+    ///   must be present in the palettes.
+    /// * `sort` - The desired sorting order for the palettes.
+    /// * `limit` - The maximum number of palettes to return per page.
+    ///
+    /// # Returns
+    ///
+    /// A [`PalettePaginator`] that yields pages of palettes.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use blockpalettes_client::{BlockPalettesClient, Client, SortOrder};
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let client = BlockPalettesClient::new(Client::new());
+    ///     let mut paginator = client.palettes_paginated(&["oak_log", "dirt"], SortOrder::Popular, 5);
+    ///
+    ///     while let Some(palettes) = paginator.next_page().await? {
+    ///         for palette in &palettes {
+    ///             println!("Palette {}: {:?}", palette.id, palette.name());
+    ///         }
+    ///     }
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn palettes_paginated(
+        &self,
+        blocks: &[&str],
+        sort: SortOrder,
+        limit: u32,
+    ) -> PalettePaginator<'_> {
+        PalettePaginator {
+            client: self,
+            blocks: blocks.iter().map(|&s| s.to_string()).collect(),
+            sort,
+            limit,
+            page: 1,
+            total_pages: None,
+            finished: false,
+            #[cfg(feature = "stream")]
+            fut: None,
+        }
+    }
+
     /// Retrieves detailed information for a single palette by its ID.
     ///
     /// This method queries the `/api/palettes/single_palette.php` endpoint.
@@ -495,6 +565,181 @@ impl BlockPalettesClient {
             blocks,
             similar_palette_ids: similar,
         })
+    }
+}
+
+#[cfg(feature = "stream")]
+type PageFuture = Pin<Box<dyn Future<Output = Result<(Vec<Palette>, Option<u32>)>> + Send>>;
+
+/// An iterator-style paginator for fetching palette results page by page.
+///
+/// Returned by [`BlockPalettesClient::palettes_paginated`]. Call [`next_page`]
+/// repeatedly to consume each page of results.
+///
+/// The paginator stops when no more pages are available (an empty page is
+/// returned or the reported page count is exhausted).
+///
+/// [`next_page`]: Self::next_page
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use blockpalettes_client::{BlockPalettesClient, Client, SortOrder};
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let client = BlockPalettesClient::new(Client::new());
+///     let mut paginator = client.palettes_paginated(&["stone"], SortOrder::Recent, 10);
+///
+///     while let Some(palettes) = paginator.next_page().await? {
+///         println!("Page with {} palettes", palettes.len());
+///     }
+///     Ok(())
+/// }
+/// ```
+pub struct PalettePaginator<'a> {
+    client: &'a BlockPalettesClient,
+    blocks: Vec<String>,
+    sort: SortOrder,
+    limit: u32,
+    page: u32,
+    total_pages: Option<u32>,
+    finished: bool,
+    #[cfg(feature = "stream")]
+    fut: Option<PageFuture>,
+}
+
+impl std::fmt::Debug for PalettePaginator<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PalettePaginator")
+            .field("blocks", &self.blocks)
+            .field("sort", &self.sort)
+            .field("limit", &self.limit)
+            .field("page", &self.page)
+            .field("total_pages", &self.total_pages)
+            .field("finished", &self.finished)
+            .finish_non_exhaustive()
+    }
+}
+
+impl PalettePaginator<'_> {
+    /// Fetches the next page of palettes.
+    ///
+    /// Returns `Ok(Some(palettes))` for each available page, or
+    /// `Ok(None)` when all pages have been consumed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BlockPalettesError`] if the underlying API request fails.
+    pub async fn next_page(&mut self) -> Result<Option<Vec<Palette>>> {
+        if self.finished {
+            return Ok(None);
+        }
+
+        let blocks_refs: Vec<&str> = self.blocks.iter().map(|s| s.as_str()).collect();
+        let response = self
+            .client
+            .get_palettes(&blocks_refs, self.sort, self.page, self.limit)
+            .await?;
+
+        if self.total_pages.is_none() {
+            self.total_pages = response.total_pages;
+        }
+
+        self.page += 1;
+
+        let palettes = response.palettes.unwrap_or_default();
+        if palettes.is_empty() {
+            self.finished = true;
+        } else if let Some(total) = self.total_pages
+            && self.page > total
+        {
+            self.finished = true;
+        }
+
+        Ok(Some(palettes))
+    }
+}
+
+#[cfg(feature = "stream")]
+impl Stream for PalettePaginator<'_> {
+    type Item = Result<Vec<Palette>>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+
+        if this.finished {
+            return Poll::Ready(None);
+        }
+
+        // poll in-flight future if one exists
+        if let Some(fut) = this.fut.as_mut() {
+            let fut = Pin::new(fut);
+            return match fut.poll(cx) {
+                Poll::Ready(Ok((palettes, new_total_pages))) => {
+                    this.fut = None;
+                    if this.total_pages.is_none() {
+                        this.total_pages = new_total_pages;
+                    }
+                    if palettes.is_empty() {
+                        this.finished = true;
+                    } else if let Some(total) = this.total_pages
+                        && this.page > total
+                    {
+                        this.finished = true;
+                    }
+                    Poll::Ready(Some(Ok(palettes)))
+                }
+                Poll::Ready(Err(e)) => {
+                    this.fut = None;
+                    Poll::Ready(Some(Err(e)))
+                }
+                Poll::Pending => Poll::Pending,
+            };
+        }
+
+        // start fetching the next page
+        let page = this.page;
+        this.page += 1;
+
+        let blocks = this.blocks.clone();
+        let client = this.client.clone();
+        let sort = this.sort;
+        let limit = this.limit;
+
+        let fut: PageFuture = Box::pin(async move {
+            let blocks_refs: Vec<&str> = blocks.iter().map(|s| s.as_str()).collect();
+            let response = client.get_palettes(&blocks_refs, sort, page, limit).await?;
+            let palettes = response.palettes.unwrap_or_default();
+            Ok((palettes, response.total_pages))
+        });
+
+        this.fut = Some(fut);
+
+        // poll the newly-created future immediately
+        let fut = this.fut.as_mut().unwrap();
+        let fut = Pin::new(fut);
+        match fut.poll(cx) {
+            Poll::Ready(Ok((palettes, new_total_pages))) => {
+                this.fut = None;
+                if this.total_pages.is_none() {
+                    this.total_pages = new_total_pages;
+                }
+                if palettes.is_empty() {
+                    this.finished = true;
+                } else if let Some(total) = this.total_pages
+                    && this.page > total
+                {
+                    this.finished = true;
+                }
+                Poll::Ready(Some(Ok(palettes)))
+            }
+            Poll::Ready(Err(e)) => {
+                this.fut = None;
+                Poll::Ready(Some(Err(e)))
+            }
+            Poll::Pending => Poll::Pending,
+        }
     }
 }
 
